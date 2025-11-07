@@ -8,27 +8,27 @@ Ademas sentimos que las aplicaciones se han vuelto mas opacas, mostrando solo la
 
 
 ### Propiedades
-Idea: 
-   Red social
-Nombre:
-   Carisma
-Estilo:
-   Foro/Twits
-   (Chat si hay tiempo)
-Plataforma:
-   Multiplataforma
-Tech stack:
-   Front -> Flutter
-   Backend -> python(FastAPI)
-   BBDD -> MySQL
-    Code sync -> GitHub
+- Idea: 
+   - Red social
+- Nombre:
+   - Carisma
+- Estilo:
+   - Foro/Twits
+   - (Chat si hay tiempo)
+- Plataforma:
+   - Multiplataforma
+- Tech stack:
+   - Front -> Flutter
+   - Backend -> python(FastAPI)
+   - BBDD -> MySQL
+      - Code sync -> GitHub
 
 ### Coders
 
 #### GRDinculescu
-- Especialista frontend
 - Entusiasta de Android
-- La razon principal por la que el proyecto tendra una estructura estable
+- Coleccion de 16 niños en el sotano
+- La razon principal por la que el proyecto ira bien
 - Se encargara principalmente del frontend con Flutter
 
 #### Tron89
