@@ -1,0 +1,59 @@
+@base_url = http://localhost:8000/v1
+@idempotency_key = 8f49a6c6-acde-4b40-a5cf-561412ae6b5a
+
+### List posts (cursor pagination, include, fields)
+GET {{base_url}}/posts?limit=20&cursor=eyJpZCI6InBvc3RfMTIzIn0=&sort=new&order=desc&include=author,community&fields[posts]=id,title,author_id,community_id,created_at,score
+Accept: application/json
+
+### Create post (idempotent)
+POST {{base_url}}/posts
+Content-Type: application/json
+Idempotency-Key: {{idempotency_key}}
+
+{
+  "community_id": "community_1",
+  "title": "Hello world",
+  "body": "First post",
+  "image_url": null
+}
+
+### Get post by id
+GET {{base_url}}/posts/post_123?include=author,community
+Accept: application/json
+
+### Update post (partial)
+PATCH {{base_url}}/posts/post_123
+Content-Type: application/json
+
+{
+  "title": "Updated title",
+  "body": "Updated body"
+}
+
+### Delete post
+DELETE {{base_url}}/posts/post_123
+Accept: application/json
+
+### Vote on a post (idempotent)
+PUT {{base_url}}/posts/post_123/vote
+Content-Type: application/json
+
+{
+  "value": 1
+}
+
+### Clear vote
+DELETE {{base_url}}/posts/post_123/vote
+Accept: application/json
+
+### List comments for a post
+GET {{base_url}}/posts/post_123/comments?limit=50&sort=new&order=asc
+Accept: application/json
+
+### Batch read posts
+POST {{base_url}}/posts/batch
+Content-Type: application/json
+
+{
+  "ids": ["post_123", "post_456", "post_789"]
+}
