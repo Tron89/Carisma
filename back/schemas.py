@@ -15,9 +15,8 @@ class PostOut(BaseModel):
     created_at: datetime
 
 class PostCreatePayload(BaseModel):
-    username: str
-    community: str
-    title: str
+    community: str = Field(min_length=1)
+    title: str = Field(min_length=1)
     body: Optional[str] = None
     image_url: Optional[str] = None
 

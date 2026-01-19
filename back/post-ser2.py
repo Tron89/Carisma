@@ -1,5 +1,7 @@
 # simple_api.py
 
+# TODO: Validations of privileges needed
+
 from datetime import datetime, timedelta, timezone
 from typing import Optional, List
 import random
@@ -157,16 +159,18 @@ def get_user(
         
     return user
 
-def get_or_create_community(session: Session, name: str, owner_username: str) -> Community:
-    c = session.exec(select(Community).where(Community.name == name)).first()
-    if c:
-        return c
-    owner = get_or_create_user(session, owner_username)
-    c = Community(name=name, title=name+" Community", owner_user_id=owner.id)
-    session.add(c)
-    session.commit()
-    session.refresh(c)
-    return c
+def get_community(
+    communitystr: str,
+    session: Session = Depends(get_session),
+) -> Optional[Community]:
+    community: Optional[Community] = None
+    if isinstance(communitystr, int) or (isinstance(communitystr, str) and communitystr.isdigit()):
+        community = session.get(Community, int(communitystr))
+
+    if not community:
+        community = session.exec(select(Community).where(Community.name == str(communitystr))).first()
+
+    return community
 
 # ---- Pydantic Schemas ----
 
@@ -258,12 +262,12 @@ def new_community(
     )
 # TODO: make it to get by name or id
 @app.get("/communities/{community_id}", response_model=CommunityOut)
-def get_community(
+def get_community_by_id(
     community_id: int,
     session: Session = Depends(get_session),
     me: User = Depends(get_current_user),
 ):
-    community = session.get(Community, community_id)
+    community = get_community(community_id, session=session)
     if not community or community.deleted_at is not None:
         raise HTTPException(status_code=404, detail="community not found")
     return CommunityOut(
@@ -305,65 +309,61 @@ def get_5_random_posts(
         for p in sample
     ]
 
-# ---- 2) POST /posts/new -> create post by usernames + community names ----
+# ---- 1b) GET /posts/{id} -> single post ----
 
-@app.post("/posts/new", response_model=PostCreateResponse)
-def new_post(payload: PostCreatePayload):
-    # expects: { "username": "...", "community": "...", "title": "...", "body": "...?", "image_url": "...?" }
-    username = payload.username
-    community_name = payload.community
-    title = payload.title
+@app.get("/posts/{post_id}", response_model=PostOut)
+def get_post(
+    post_id: int,
+    session: Session = Depends(get_session),
+    me: Optional[User] = Depends(get_optional_current_user),
+):
+    _ = me
+    post = session.get(Post, post_id)
+    if not post or post.deleted_at is not None:
+        raise HTTPException(status_code=404, detail="post not found")
 
-    if not username or not community_name or not title:
-        raise HTTPException(400, "username, community, title are required")
+    return PostOut(
+        id=post.id,
+        community_id=post.community_id,
+        author_user_id=post.author_user_id,
+        title=post.title,
+        body=post.body,
+        image_url=post.image_url,
+        created_at=post.created_at,
+    )
 
-    with Session(engine) as session:
-        user = get_or_create_user(session, username)
-        community = get_or_create_community(session, community_name, username)
+# ---- 2) POST /posts/new -> create post for current user ----
 
-        post = Post(
-            community_id=community.id,
-            author_user_id=user.id,
-            title=title,
-            body=payload.body,
-            image_url=payload.image_url,
-            created_at=datetime.now(timezone.utc),
-        )
-        session.add(post)
-        session.commit()
-        session.refresh(post)
+@app.post("/posts/new", response_model=PostOut, status_code=status.HTTP_201_CREATED)
+def new_post(
+    payload: PostCreatePayload,
+    session: Session = Depends(get_session),
+    me: User = Depends(get_current_user),
+):
+    community = get_community(payload.community, session=session)
+    if not community or community.deleted_at is not None:
+        raise HTTPException(status_code=404, detail="community not found")
 
-        return PostCreateResponse(id=post.id)
+    post = Post(
+        community_id=community.id,
+        author_user_id=me.id,
+        title=payload.title,
+        body=payload.body,
+        image_url=payload.image_url,
+    )
+    session.add(post)
+    session.commit()
+    session.refresh(post)
+    return PostOut(
+        id=post.id,
+        community_id=post.community_id,
+        author_user_id=post.author_user_id,
+        title=post.title,
+        body=post.body,
+        image_url=post.image_url,
+        created_at=post.created_at,
+    )
 
-# ---- 3) POST /posts/{id}/thumb -> vote with dummy user ----
-
-DUMMY_USERNAME = "default_dummy_user"
-
-@app.post("/posts/{post_id}/thumb")
-def thumb(post_id: int, payload: PostThumbPayload):
-    # expects: { "value": 1 } or { "value": -1 }
-    value = payload.value
-    if value not in (1, -1):
-        raise HTTPException(400, "value must be 1 or -1")
-
-    with Session(engine) as session:
-        post = session.get(Post, post_id)
-        if not post:
-            raise HTTPException(404, "post not found")
-
-        dummy = get_or_create_user(session, DUMMY_USERNAME)
-
-        # upsert-ish: update if exists else insert
-        vote = session.get(PostVote, (post_id, dummy.id))
-        if vote:
-            vote.value = value
-            vote.created_at = datetime.now(timezone.utc)
-        else:
-            vote = PostVote(post_id=post_id, user_id=dummy.id, value=value, created_at=datetime.now(timezone.utc))
-            session.add(vote)
-
-        session.commit()
-        return {"ok": True, "post_id": post_id, "user": DUMMY_USERNAME, "value": value}
 
 if __name__ == "__main__":
     # Create tables if you want (usually do this in a migration tool instead)
