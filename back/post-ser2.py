@@ -3,6 +3,9 @@
 from datetime import datetime, timedelta, timezone
 from typing import Optional, List
 import random
+import secrets
+import base64
+import hashlib
 
 from fastapi import FastAPI, HTTPException, Depends, Header, status
 from sqlmodel import SQLModel, Session, create_engine, select
@@ -49,7 +52,7 @@ app = FastAPI(lifespan=lifespan)
 
 # ---------- JWT ----------
 def create_token(data: dict):
-    exp = datetime.now(timezone.utc) + timedelta(hours=1)
+    exp = datetime.now(timezone.utc) + timedelta(hours=24)
     payload = {**data, "exp": exp}
     return jwt.encode({"alg": JWT_ALG}, payload, JWT_SECRET)
 
@@ -69,6 +72,42 @@ def get_session():
 def _unauthorized(detail: str = "Unauthorized") -> None:
     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=detail)
 
+def hash_password(plain_password: str) -> str:
+    iterations = 210_000
+    salt = secrets.token_bytes(16)
+    digest = hashlib.pbkdf2_hmac(
+        "sha256",
+        plain_password.encode("utf-8"),
+        salt,
+        iterations,
+    )
+    return "pbkdf2_sha256${}${}${}".format(
+        iterations,
+        base64.b64encode(salt).decode("ascii"),
+        base64.b64encode(digest).decode("ascii"),
+    )
+
+def verify_password(plain_password: str, password_hash: str) -> bool:
+    parts = password_hash.split("$", 3)
+    if len(parts) != 4 or parts[0] != "pbkdf2_sha256":
+        return secrets.compare_digest(plain_password, password_hash)
+
+    _, iter_str, salt_b64, digest_b64 = parts
+    try:
+        iterations = int(iter_str)
+        salt = base64.b64decode(salt_b64)
+        expected = base64.b64decode(digest_b64)
+    except (ValueError, TypeError):
+        return False
+
+    test = hashlib.pbkdf2_hmac(
+        "sha256",
+        plain_password.encode("utf-8"),
+        salt,
+        iterations,
+    )
+    return secrets.compare_digest(test, expected)
+
 def get_current_user(
     session: Session = Depends(get_session),
     authorization: Optional[str] = Header(default=None),
@@ -83,9 +122,12 @@ def get_current_user(
     if sub is None:
         _unauthorized("Invalid token (missing sub)")
 
-    user: Optional[User] = None
+    try:
+        user_id = int(sub)
+    except (TypeError, ValueError):
+        _unauthorized("Invalid token (bad sub)")
 
-
+    user = session.get(User, user_id)
     if not user:
         _unauthorized("User not found")
     if user.status in (UserStatus.BANNED, UserStatus.DELETED):
@@ -93,29 +135,26 @@ def get_current_user(
 
     return user
 
-def get_user(session: Session, userstr: str) -> Optional[User]:
+def get_optional_current_user(
+    session: Session = Depends(get_session),
+    authorization: Optional[str] = Header(default=None),
+) -> Optional[User]:
+    if not authorization:
+        return None
+    return get_current_user(session=session, authorization=authorization)
+
+# Get user by username or ID
+def get_user(
+    userstr: str,
+    session: Session = Depends(get_session),
+    ) -> Optional[User]:
     user: Optional[User] = None
     if isinstance(userstr, int) or (isinstance(userstr, str) and userstr.isdigit()):
-        try:
-            user_id = int(userstr)
-        except (TypeError, ValueError):
-            user_id = None
-        if user_id is not None:
-            user = session.get(User, user_id)
+        user = session.get(User, int(userstr))
 
     if not user:
         user = session.exec(select(User).where(User.username == str(userstr))).first()
         
-    return user
-
-def get_or_create_user(session: Session, username: str) -> User:
-    user = session.exec(select(User).where(User.username == username)).first()
-    if user:
-        return user
-    user = User(username=username, email=username+"@example.com", password_hash=username+"hashed_dummy")
-    session.add(user)
-    session.commit()
-    session.refresh(user)
     return user
 
 def get_or_create_community(session: Session, name: str, owner_username: str) -> Community:
@@ -131,31 +170,88 @@ def get_or_create_community(session: Session, name: str, owner_username: str) ->
 
 # ---- Pydantic Schemas ----
 
+@app.post("/register", response_model=UserPrivateOut, status_code=status.HTTP_201_CREATED)
+def register(payload: UserCreatePayload, session: Session = Depends(get_session)):
+    if payload.username.isdigit():
+        raise HTTPException(status_code=400, detail="username must include at least one letter")
+
+    existing_user = session.exec(select(User).where(User.username == payload.username)).first()
+    if existing_user:
+        raise HTTPException(status_code=409, detail="username already exists")
+
+    existing_email = session.exec(select(User).where(User.email == payload.email)).first()
+    if existing_email:
+        raise HTTPException(status_code=409, detail="email already exists")
+
+    user = User(
+        username=payload.username,
+        email=payload.email,
+        password_hash=hash_password(payload.password),
+    )
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    return UserPrivateOut(
+        id=user.id,
+        username=user.username,
+        email=user.email,
+        created_at=user.created_at,
+        status=user.status,
+        status_changed_at=user.status_changed_at,
+        banned_reason=user.banned_reason,
+    )
+
+@app.post("/login", response_model=LoginResponse)
+def login(payload: LoginPayload, session: Session = Depends(get_session)):
+    user = session.exec(select(User).where(User.username == payload.username)).first()
+    if not user or not verify_password(payload.password, user.password_hash):
+        _unauthorized("Bad credentials")
+
+    if user.status in (UserStatus.BANNED, UserStatus.DELETED):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account disabled")
+
+    token = create_token({"sub": str(user.id)})
+    return LoginResponse(
+        access_token=token,
+        token_type="bearer",
+        user=UserPrivateOut(
+            id=user.id,
+            username=user.username,
+            email=user.email,
+            created_at=user.created_at,
+            status=user.status,
+            status_changed_at=user.status_changed_at,
+            banned_reason=user.banned_reason,
+        ),
+    )
 
 
 # ---- 1) GET /posts -> 5 random posts ----
 
 @app.get("/posts", response_model=List[PostOut])
-def get_5_random_posts():
-    with Session(engine) as session:
-        posts = session.exec(select(Post)).all()
-        if not posts:
-            return []
-        sample = random.sample(posts, k=min(5, len(posts)))
+def get_5_random_posts(
+    session: Session = Depends(get_session),
+    me: Optional[User] = Depends(get_optional_current_user),
+):
+    _ = me
+    posts = session.exec(select(Post)).all()
+    if not posts:
+        return []
+    sample = random.sample(posts, k=min(5, len(posts)))
 
-        # super simple response
-        return [
-            PostOut(
-                id=p.id,
-                community_id=p.community_id,
-                author_user_id=p.author_user_id,
-                title=p.title,
-                body=p.body,
-                image_url=p.image_url,
-                created_at=p.created_at,
-            )
-            for p in sample
-        ]
+    # super simple response
+    return [
+        PostOut(
+            id=p.id,
+            community_id=p.community_id,
+            author_user_id=p.author_user_id,
+            title=p.title,
+            body=p.body,
+            image_url=p.image_url,
+            created_at=p.created_at,
+        )
+        for p in sample
+    ]
 
 # ---- 2) POST /posts/new -> create post by usernames + community names ----
 
