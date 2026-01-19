@@ -1,6 +1,7 @@
 # simple_api.py
 
 # TODO: Validations of privileges needed
+# TODO: To implement APIRouter
 
 from datetime import datetime, timedelta, timezone
 from typing import Optional, List
