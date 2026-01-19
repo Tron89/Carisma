@@ -10,7 +10,7 @@ import secrets
 import base64
 import hashlib
 
-from fastapi import FastAPI, HTTPException, Depends, Header, status
+from fastapi import FastAPI, HTTPException, Depends, Header, status, APIRouter
 from sqlmodel import SQLModel, Session, create_engine, select
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
@@ -50,6 +50,7 @@ async def lifespan(app: FastAPI):
     # shutdown
 
 app = FastAPI(lifespan=lifespan)
+v1 = APIRouter(prefix="/v1")
 
 # ---- Helper functions ----
 
@@ -175,7 +176,7 @@ def get_community(
 
 # ---- Pydantic Schemas ----
 
-@app.post("/register", response_model=UserPrivateOut, status_code=status.HTTP_201_CREATED)
+@v1.post("/register", response_model=UserPrivateOut, status_code=status.HTTP_201_CREATED)
 def register(payload: UserCreatePayload, session: Session = Depends(get_session)):
     if payload.username.isdigit():
         raise HTTPException(status_code=400, detail="username must include at least one letter")
@@ -206,7 +207,7 @@ def register(payload: UserCreatePayload, session: Session = Depends(get_session)
         banned_reason=user.banned_reason,
     )
 
-@app.post("/login", response_model=LoginResponse)
+@v1.post("/login", response_model=LoginResponse)
 def login(payload: LoginPayload, session: Session = Depends(get_session)):
     user = session.exec(select(User).where(User.username == payload.username)).first()
     if not user or not verify_password(payload.password, user.password_hash):
@@ -232,7 +233,7 @@ def login(payload: LoginPayload, session: Session = Depends(get_session)):
 
 # ---- Communities ----
 
-@app.post("/communities/new", response_model=CommunityOut, status_code=status.HTTP_201_CREATED)
+@v1.post("/communities/new", response_model=CommunityOut, status_code=status.HTTP_201_CREATED)
 def new_community(
     payload: CommunityCreatePayload,
     session: Session = Depends(get_session),
@@ -262,7 +263,7 @@ def new_community(
         created_at=community.created_at,
     )
 # TODO: make it to get by name or id
-@app.get("/communities/{community_id}", response_model=CommunityOut)
+@v1.get("/communities/{community_id}", response_model=CommunityOut)
 def get_community_by_id(
     community_id: int,
     session: Session = Depends(get_session),
@@ -285,7 +286,7 @@ def get_community_by_id(
 
 # ---- 1) GET /posts -> 5 random posts ----
 
-@app.get("/posts", response_model=List[PostOut])
+@v1.get("/posts", response_model=List[PostOut])
 def get_5_random_posts(
     session: Session = Depends(get_session),
     me: Optional[User] = Depends(get_optional_current_user),
@@ -312,7 +313,7 @@ def get_5_random_posts(
 
 # ---- 1b) GET /posts/{id} -> single post ----
 
-@app.get("/posts/{post_id}", response_model=PostOut)
+@v1.get("/posts/{post_id}", response_model=PostOut)
 def get_post(
     post_id: int,
     session: Session = Depends(get_session),
@@ -335,7 +336,7 @@ def get_post(
 
 # ---- 2) POST /posts/new -> create post for current user ----
 
-@app.post("/posts/new", response_model=PostOut, status_code=status.HTTP_201_CREATED)
+@v1.post("/posts/new", response_model=PostOut, status_code=status.HTTP_201_CREATED)
 def new_post(
     payload: PostCreatePayload,
     session: Session = Depends(get_session),
@@ -365,6 +366,8 @@ def new_post(
         created_at=post.created_at,
     )
 
+
+app.include_router(v1)
 
 if __name__ == "__main__":
     # Create tables if you want (usually do this in a migration tool instead)
