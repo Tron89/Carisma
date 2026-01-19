@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import List, Optional
 
@@ -36,10 +36,10 @@ class User(SQLModel, table=True):
     email: str = Field(index=True, nullable=False)
     password_hash: str = Field(nullable=False)
 
-    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    created_at: datetime = Field(default_factory=datetime.now(timezone.utc), nullable=False)
 
     status: UserStatus = Field(default=UserStatus.ACTIVE, nullable=False)
-    status_changed_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    status_changed_at: datetime = Field(default_factory=datetime.now(timezone.utc), nullable=False)
     banned_reason: Optional[str] = Field(default=None)
 
     owned_communities: List["Community"] = Relationship(
@@ -77,16 +77,15 @@ class Community(SQLModel, table=True):
 
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str = Field(index=True, nullable=False)
-    title: str = Field(nullable=False)
     description: Optional[str] = Field(default=None)
     type: CommunityType = Field(default=CommunityType.PUBLIC, nullable=False)
 
     owner_user_id: int = Field(foreign_key="users.id", nullable=False, index=True)
 
-    is_personal: bool = Field(default=False, nullable=False)
+    is_personal: bool = Field(default=False, nullable=False) # TODO: maybe its not necesary the personal comunity
     personal_user_id: Optional[int] = Field(default=None, foreign_key="users.id", index=True)
 
-    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    created_at: datetime = Field(default_factory=datetime.now(timezone.utc), nullable=False)
 
     deleted_at: Optional[datetime] = Field(default=None, index=True)
 
@@ -120,7 +119,7 @@ class Post(SQLModel, table=True):
 
     image_url: Optional[str] = Field(default=None)
 
-    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False, index=True)
+    created_at: datetime = Field(default_factory=datetime.now(timezone.utc), nullable=False, index=True)
     edited_at: Optional[datetime] = Field(default=None)
     deleted_at: Optional[datetime] = Field(default=None, index=True)
 
@@ -141,7 +140,7 @@ class Comment(SQLModel, table=True):
 
     body: str = Field(nullable=False)
 
-    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False, index=True)
+    created_at: datetime = Field(default_factory=datetime.now(timezone.utc), nullable=False, index=True)
     edited_at: Optional[datetime] = Field(default=None)
     deleted_at: Optional[datetime] = Field(default=None, index=True)
 
@@ -165,7 +164,7 @@ class CommunityRoleAssignment(SQLModel, table=True):
 
     role: CommunityRole = Field(default=CommunityRole.MEMBER, nullable=False)
     granted_by_user_id: Optional[int] = Field(default=None, foreign_key="users.id", index=True)
-    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    created_at: datetime = Field(default_factory=datetime.now(timezone.utc), nullable=False)
 
     community: "Community" = Relationship(back_populates="roles")
     user: "User" = Relationship(
@@ -185,7 +184,7 @@ class PostVote(SQLModel, table=True):
     user_id: int = Field(foreign_key="users.id", primary_key=True)
 
     value: int = Field(nullable=False)  # +1 / -1
-    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    created_at: datetime = Field(default_factory=datetime.now(timezone.utc), nullable=False)
 
     post: "Post" = Relationship(back_populates="votes")
     user: "User" = Relationship(back_populates="post_votes")
@@ -198,7 +197,7 @@ class CommentVote(SQLModel, table=True):
     user_id: int = Field(foreign_key="users.id", primary_key=True)
 
     value: int = Field(nullable=False)  # +1 / -1
-    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    created_at: datetime = Field(default_factory=datetime.now(timezone.utc), nullable=False)
 
     comment: "Comment" = Relationship(back_populates="votes")
     user: "User" = Relationship(back_populates="comment_votes")

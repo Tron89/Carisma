@@ -225,6 +225,58 @@ def login(payload: LoginPayload, session: Session = Depends(get_session)):
         ),
     )
 
+# ---- Communities ----
+
+@app.post("/communities/new", response_model=CommunityOut, status_code=status.HTTP_201_CREATED)
+def new_community(
+    payload: CommunityCreatePayload,
+    session: Session = Depends(get_session),
+    me: User = Depends(get_current_user),
+):
+    existing = session.exec(select(Community).where(Community.name == payload.name)).first()
+    if existing:
+        raise HTTPException(status_code=409, detail="community already exists")
+
+    community = Community(
+        name=payload.name,
+        description=payload.description,
+        type=payload.type,
+        owner_user_id=me.id,
+    )
+    session.add(community)
+    session.commit()
+    session.refresh(community)
+    return CommunityOut(
+        id=community.id,
+        name=community.name,
+        description=community.description,
+        type=community.type,
+        owner_user_id=community.owner_user_id,
+        is_personal=community.is_personal, # TODO: maybe its not necesary the personal comunity
+        personal_user_id=community.personal_user_id,
+        created_at=community.created_at,
+    )
+# TODO: make it to get by name or id
+@app.get("/communities/{community_id}", response_model=CommunityOut)
+def get_community(
+    community_id: int,
+    session: Session = Depends(get_session),
+    me: User = Depends(get_current_user),
+):
+    community = session.get(Community, community_id)
+    if not community or community.deleted_at is not None:
+        raise HTTPException(status_code=404, detail="community not found")
+    return CommunityOut(
+        id=community.id,
+        name=community.name,
+        description=community.description,
+        type=community.type,
+        owner_user_id=community.owner_user_id,
+        is_personal=community.is_personal,
+        personal_user_id=community.personal_user_id,
+        created_at=community.created_at,
+    )
+
 
 # ---- 1) GET /posts -> 5 random posts ----
 

@@ -1,10 +1,10 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime
 
 from models import UserStatus, CommunityType
 
-
+# TODO: I have to remake this with the Field from pydantic, to avoid validation in the main
 class PostOut(BaseModel):
     id: int
     community_id: int
@@ -42,18 +42,15 @@ class UserPrivateOut(UserBaseOut):
 class CommunityOut(BaseModel):
     id: int
     name: str
-    title: str
     description: str | None = None
     type: CommunityType
     owner_user_id: int
-    is_personal: bool
+    is_personal: bool # TODO: maybe its not necesary the personal comunity
     personal_user_id: int | None = None
     created_at: datetime
 
 class CommunityCreatePayload(BaseModel):
-    name: str
-    owner_username: str
-    title: str | None = None
+    name: str = Field(min_length=1)
     description: str | None = None
     type: CommunityType = CommunityType.PUBLIC
 
