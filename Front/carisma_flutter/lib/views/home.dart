@@ -1,7 +1,9 @@
 import 'dart:math';
+import 'dart:convert';
 
 import 'package:carisma_flutter/models/post_info.dart';
-import 'package:carisma_flutter/util/app_data.dart';
+// import 'package:carisma_flutter/util/app_data.dart';
+import 'package:carisma_flutter/util/http_connection.dart';
 import 'package:carisma_flutter/widgets/bottom_nav_bar.dart';
 import 'package:carisma_flutter/widgets/post.dart';
 import 'package:carisma_flutter/widgets/top_nav_bar.dart';
@@ -17,6 +19,7 @@ class HomeView extends StatefulWidget {
 class _HomeViewState extends State<HomeView> {
   final Random rng = Random();
   final ScrollController scrollController = ScrollController();
+  final api = HttpConnection('http://10.0.2.2:8000/v1/');
 
   int currentIndex = 0;
   bool isLoading = false;
@@ -44,25 +47,29 @@ class _HomeViewState extends State<HomeView> {
   }
 
   Future<void> getPosts() async {
-    List<PostInfo> newPosts = [];
+    final response = await api.get('posts');
 
-    for (int i = 0; i < 10; i++) {
-      newPosts.add(
-        PostInfo(
-          rng.nextBool()
-              ? null
-              : AppData.imgs[rng.nextInt(AppData.imgs.length)],
-          AppData.titles[rng.nextInt(AppData.titles.length)],
-          rng.nextInt(10000),
-          rng.nextInt(1000),
-          rng.nextInt(1000),
-        ),
-      );
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      List<PostInfo> fetchedPosts = data.map((post) {
+        String? imgUrl = post['image_url']?.toString();
+        return PostInfo(
+          (imgUrl == null || imgUrl.isEmpty) ? null : imgUrl,
+          post['title'] ?? 'No Title',
+          rng.nextInt(1000), // Likes aleatorios
+          rng.nextInt(1000), // Dislikes aleatorios
+          rng.nextInt(500),  // Comments aleatorios
+        );
+      }).toList();
+
+      setState(() {
+        posts.addAll(fetchedPosts);
+      });
+      return;
+    } else {
+      print("Error fetching posts: ${response.statusCode}");
+      return;
     }
-
-    setState(() {
-      posts.addAll(newPosts);
-    });
   }
 
   Future<void> onReachEnd() async {
@@ -110,7 +117,7 @@ class _HomeViewState extends State<HomeView> {
                     ),
                     onRefresh: () async {
                       posts.clear();
-                      getPosts();
+                      await getPosts();
                     },
                   ),
                 ),
