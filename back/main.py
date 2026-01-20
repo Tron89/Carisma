@@ -272,7 +272,7 @@ def new_community(
         personal_user_id=community.personal_user_id,
         created_at=community.created_at,
     )
-# TODO: make it to get by name or id
+
 @v1.get("/communities/{community_str}", response_model=CommunityOut)
 def get_community_by_id(
     community_str: str,
