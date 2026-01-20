@@ -1,32 +1,37 @@
-from pydantic import BaseModel, Field
+# schemas.py
+
+from pydantic import BaseModel, Field, EmailStr
 from typing import Optional
 from datetime import datetime
 
 from models import UserStatus, CommunityType
 
-# TODO: I have to remake this with the Field from pydantic, to avoid validation in the main
-class PostOut(BaseModel):
-    id: int
-    community_id: int
-    author_user_id: int
-    title: str
-    body: Optional[str] = None
-    image_url: Optional[str] = None
-    created_at: datetime
+# ---- Payloads ----
 
 class PostCreatePayload(BaseModel):
-    community: str = Field(min_length=1)
+    community: str = Field(min_length=1, pattern=r".*\D.*")
     title: str = Field(min_length=1)
-    body: Optional[str] = None
-    image_url: Optional[str] = None
-
-class PostCreateResponse(BaseModel):
-    id: int
+    body: Optional[str] = Field(default=None, min_length=1)
+    image_url: Optional[str] = Field(default=None, min_length=1)
 
 class PostThumbPayload(BaseModel):
-    value: int
+    value: int = Field(ge=-1, le=1)
+    
+class CommunityCreatePayload(BaseModel):
+    name: str = Field(min_length=1, pattern=r".*\D.*")
+    description: str | None = Field(default=None, min_length=1)
+    type: CommunityType = CommunityType.PUBLIC
 
-#---- User Schemas ----
+class UserCreatePayload(BaseModel):
+    username: str = Field(min_length=1, pattern=r".*\D.*")
+    email: EmailStr = Field(max_length=254)
+    password: str = Field(min_length=1)
+
+class LoginPayload(BaseModel):
+    username: str = Field(min_length=1, pattern=r".*\D.*")
+    password: str = Field(min_length=1)
+
+# ---- Object Schemas ----
 class UserBaseOut(BaseModel):
     id: int
     username: str
@@ -47,20 +52,20 @@ class CommunityOut(BaseModel):
     is_personal: bool # TODO: maybe its not necesary the personal comunity
     personal_user_id: int | None = None
     created_at: datetime
+    
+class PostOut(BaseModel):
+    id: int
+    community_id: int
+    author_user_id: int
+    title: str
+    body: Optional[str] = None
+    image_url: Optional[str] = None
+    created_at: datetime
 
-class CommunityCreatePayload(BaseModel):
-    name: str = Field(min_length=1)
-    description: str | None = None
-    type: CommunityType = CommunityType.PUBLIC
+# ---- Responses ----
 
-class UserCreatePayload(BaseModel):
-    username: str
-    email: str
-    password: str
-
-class LoginPayload(BaseModel):
-    username: str
-    password: str
+class PostCreateResponse(BaseModel):
+    id: int
 
 class LoginResponse(BaseModel):
     access_token: str

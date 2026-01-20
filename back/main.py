@@ -1,7 +1,8 @@
-# simple_api.py
+# main.py
 
 # TODO: Validations of privileges needed
-# TODO: To implement APIRouter
+
+# ---------- IMPORTS ----------
 
 from datetime import datetime, timedelta, timezone
 from typing import Optional, List
@@ -14,10 +15,11 @@ from fastapi import FastAPI, HTTPException, Depends, Header, status, APIRouter
 from sqlmodel import SQLModel, Session, create_engine, select
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
-load_dotenv()
 import os
-DATABASE_URL = os.getenv("DATABASE_URL")
 from authlib.jose import jwt
+
+load_dotenv()
+DATABASE_URL = os.getenv("DATABASE_URL")
 JWT_SECRET = os.getenv("JWT_SECRET")
 JWT_ALG = os.getenv("JWT_ALG")
 
@@ -34,7 +36,7 @@ from models import (
 
 from schemas import *
 
-# ---- App + DB ----
+# ---------- APP ----------
 
 engine = create_engine(
     DATABASE_URL,
@@ -52,9 +54,18 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 v1 = APIRouter(prefix="/v1")
 
-# ---- Helper functions ----
+# ---------- FUNCTIONS ----------
 
-# ---------- JWT ----------
+# ---- Basic Helpers ----
+
+def get_session():
+    with Session(engine) as session:
+        yield session
+
+def _unauthorized(detail: str = "Unauthorized") -> None:
+    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=detail)
+
+# ---- JWT + Password ----
 def create_token(data: dict):
     exp = datetime.now(timezone.utc) + timedelta(hours=24)
     payload = {**data, "exp": exp}
@@ -68,13 +79,6 @@ def verify_token(token: str):
         return claims
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid token")
-
-def get_session():
-    with Session(engine) as session:
-        yield session
-
-def _unauthorized(detail: str = "Unauthorized") -> None:
-    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=detail)
 
 def hash_password(plain_password: str) -> str:
     iterations = 210_000
@@ -112,6 +116,8 @@ def verify_password(plain_password: str, password_hash: str) -> bool:
     )
     return secrets.compare_digest(test, expected)
 
+# ---- Dependencies ----
+
 def get_current_user(
     session: Session = Depends(get_session),
     authorization: Optional[str] = Header(default=None),
@@ -147,7 +153,9 @@ def get_optional_current_user(
         return None
     return get_current_user(session=session, authorization=authorization)
 
-# Get user by username or ID
+# ---- Getters ----
+# (By id or name)
+
 def get_user(
     userstr: str,
     session: Session = Depends(get_session),
@@ -174,7 +182,9 @@ def get_community(
 
     return community
 
-# ---- Pydantic Schemas ----
+# ---- API ENDPOINTS ----
+
+# ---- Login ----
 
 @v1.post("/register", response_model=UserPrivateOut, status_code=status.HTTP_201_CREATED)
 def register(payload: UserCreatePayload, session: Session = Depends(get_session)):
@@ -233,7 +243,7 @@ def login(payload: LoginPayload, session: Session = Depends(get_session)):
 
 # ---- Communities ----
 
-@v1.post("/communities/new", response_model=CommunityOut, status_code=status.HTTP_201_CREATED)
+@v1.post("/communities", response_model=CommunityOut, status_code=status.HTTP_201_CREATED)
 def new_community(
     payload: CommunityCreatePayload,
     session: Session = Depends(get_session),
@@ -263,13 +273,13 @@ def new_community(
         created_at=community.created_at,
     )
 # TODO: make it to get by name or id
-@v1.get("/communities/{community_id}", response_model=CommunityOut)
+@v1.get("/communities/{community_str}", response_model=CommunityOut)
 def get_community_by_id(
-    community_id: int,
+    community_str: str,
     session: Session = Depends(get_session),
     me: User = Depends(get_current_user),
 ):
-    community = get_community(community_id, session=session)
+    community = get_community(community_str, session=session)
     if not community or community.deleted_at is not None:
         raise HTTPException(status_code=404, detail="community not found")
     return CommunityOut(
@@ -284,8 +294,9 @@ def get_community_by_id(
     )
 
 
-# ---- 1) GET /posts -> 5 random posts ----
+# ---- Posts ----
 
+# 5 random posts
 @v1.get("/posts", response_model=List[PostOut])
 def get_5_random_posts(
     session: Session = Depends(get_session),
@@ -311,8 +322,6 @@ def get_5_random_posts(
         for p in sample
     ]
 
-# ---- 1b) GET /posts/{id} -> single post ----
-
 @v1.get("/posts/{post_id}", response_model=PostOut)
 def get_post(
     post_id: int,
@@ -334,9 +343,7 @@ def get_post(
         created_at=post.created_at,
     )
 
-# ---- 2) POST /posts/new -> create post for current user ----
-
-@v1.post("/posts/new", response_model=PostOut, status_code=status.HTTP_201_CREATED)
+@v1.post("/posts", response_model=PostOut, status_code=status.HTTP_201_CREATED)
 def new_post(
     payload: PostCreatePayload,
     session: Session = Depends(get_session),
