@@ -157,6 +157,7 @@ def get_optional_current_user(
 
 # ---- Getters ----
 # (By id or name)
+# TODO: Names don't represent what they return
 
 def get_user_base(
     userstr: str,
@@ -170,6 +171,22 @@ def get_user_base(
         user = session.exec(select(User).where(User.username == str(userstr))).first()
         
     return user
+
+def get_user_out_pub(
+    userstr: str,
+    session: Session = Depends(get_session),
+    ) -> Optional[User]:
+    user = get_user_base(userstr, session=session)
+    
+    if not user:
+        return None
+    
+    return UserBaseOut(
+        id=user.id,
+        username=user.username,
+        created_at=user.created_at,
+        status=user.status
+    )
 
 def get_community_base(
     communitystr: str,
@@ -207,11 +224,13 @@ def get_post_base(
         .select_from(Comment)
         .where(Comment.post_id == post.id, Comment.deleted_at.is_(None))
     ).one()
+    
+    author = get_user_out_pub(post.author_user_id, session=session)
         
     return PostOut(
         id=post.id,
         community_id=post.community_id,
-        author_user_id=post.author_user_id,
+        author=author,
         title=post.title,
         body=post.body,
         image_url=post.image_url,

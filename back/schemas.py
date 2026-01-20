@@ -56,7 +56,7 @@ class CommunityOut(BaseModel):
 class PostOut(BaseModel):
     id: int
     community_id: int
-    author_user_id: int
+    author: UserBaseOut
     title: str
     body: Optional[str] = None
     image_url: Optional[str] = None
