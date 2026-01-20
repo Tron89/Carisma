@@ -13,6 +13,7 @@ import hashlib
 
 from fastapi import FastAPI, HTTPException, Depends, Header, status, APIRouter
 from sqlmodel import SQLModel, Session, create_engine, select
+from sqlalchemy import func
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 import os
@@ -32,6 +33,7 @@ from models import (
     CommunityRoleAssignment,
     Post,
     PostVote,
+    Comment,
 )
 
 from schemas import *
@@ -156,7 +158,7 @@ def get_optional_current_user(
 # ---- Getters ----
 # (By id or name)
 
-def get_user(
+def get_user_base(
     userstr: str,
     session: Session = Depends(get_session),
     ) -> Optional[User]:
@@ -169,7 +171,7 @@ def get_user(
         
     return user
 
-def get_community(
+def get_community_base(
     communitystr: str,
     session: Session = Depends(get_session),
 ) -> Optional[Community]:
@@ -181,6 +183,43 @@ def get_community(
         community = session.exec(select(Community).where(Community.name == str(communitystr))).first()
 
     return community
+
+def get_post_base(
+    postid: int,
+    session: Session = Depends(get_session),
+    ) -> Optional[Post]:
+    post: Optional[Post] = None
+    if isinstance(postid, int):
+        post = session.get(Post, int(postid))
+    # TODO: Optimizable
+    likes = session.exec(
+        select(func.count())
+        .select_from(PostVote)
+        .where(PostVote.post_id == post.id, PostVote.value == 1)
+    ).one()
+    dislikes = session.exec(
+        select(func.count())
+        .select_from(PostVote)
+        .where(PostVote.post_id == post.id, PostVote.value == -1)
+    ).one()
+    comments = session.exec(
+        select(func.count())
+        .select_from(Comment)
+        .where(Comment.post_id == post.id, Comment.deleted_at.is_(None))
+    ).one()
+        
+    return PostOut(
+        id=post.id,
+        community_id=post.community_id,
+        author_user_id=post.author_user_id,
+        title=post.title,
+        body=post.body,
+        image_url=post.image_url,
+        created_at=post.created_at,
+        likes=likes,
+        dislikes=dislikes,
+        comments=comments
+    )
 
 # ---- API ENDPOINTS ----
 
@@ -274,12 +313,12 @@ def new_community(
     )
 
 @v1.get("/communities/{community_str}", response_model=CommunityOut)
-def get_community_by_id(
+def get_community(
     community_str: str,
     session: Session = Depends(get_session),
     me: User = Depends(get_current_user),
 ):
-    community = get_community(community_str, session=session)
+    community = get_community_base(community_str, session=session)
     if not community or community.deleted_at is not None:
         raise HTTPException(status_code=404, detail="community not found")
     return CommunityOut(
@@ -303,23 +342,20 @@ def get_5_random_posts(
     me: Optional[User] = Depends(get_optional_current_user),
 ):
     _ = me
-    posts = session.exec(select(Post)).all()
-    if not posts:
+    ids = session.exec(
+        select(Post.id)
+        .where(Post.deleted_at.is_(None))
+        .order_by(func.random())
+        .limit(5) # From here the limit
+    ).all()
+    
+    if not ids:
         return []
-    sample = random.sample(posts, k=min(5, len(posts)))
 
     # super simple response
     return [
-        PostOut(
-            id=p.id,
-            community_id=p.community_id,
-            author_user_id=p.author_user_id,
-            title=p.title,
-            body=p.body,
-            image_url=p.image_url,
-            created_at=p.created_at,
-        )
-        for p in sample
+        get_post_base(id, session=session)
+        for id in ids
     ]
 
 @v1.get("/posts/{post_id}", response_model=PostOut)
@@ -329,7 +365,7 @@ def get_post(
     me: Optional[User] = Depends(get_optional_current_user),
 ):
     _ = me
-    post = session.get(Post, post_id)
+    post = get_post_base(post_id, session=session)
     if not post or post.deleted_at is not None:
         raise HTTPException(status_code=404, detail="post not found")
 
@@ -341,6 +377,9 @@ def get_post(
         body=post.body,
         image_url=post.image_url,
         created_at=post.created_at,
+        likes=post.likes,
+        dislikes=post.dislikes,
+        comments=post.comments,
     )
 
 @v1.post("/posts", response_model=PostOut, status_code=status.HTTP_201_CREATED)

@@ -61,6 +61,9 @@ class PostOut(BaseModel):
     body: Optional[str] = None
     image_url: Optional[str] = None
     created_at: datetime
+    likes: int
+    dislikes: int
+    comments: int
 
 # ---- Responses ----
 
