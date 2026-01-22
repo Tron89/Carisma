@@ -220,6 +220,26 @@ def get_community_base(
 
     return community
 
+def get_community_out(
+    communitystr: str,
+    session: Session = Depends(get_session),
+    ) -> Optional[CommunityOut]:
+    community = get_community_base(communitystr, session=session)
+    
+    if not community:
+        return None
+    
+    return CommunityOut(
+        id=community.id,
+        name=community.name,
+        description=community.description,
+        type=community.type,
+        owner_user_id=community.owner_user_id,
+        is_personal=community.is_personal,
+        personal_user_id=community.personal_user_id,
+        created_at=community.created_at,
+    )
+
 def get_post_base(
     postid: int,
     session: Session = Depends(get_session),
@@ -384,19 +404,10 @@ def get_community(
     session: Session = Depends(get_session),
     me: User = Depends(get_current_user),
 ):
-    community = get_community_base(community_str, session=session)
+    community = get_community_out(community_str, session=session)
     if not community or community.deleted_at is not None:
         raise HTTPException(status_code=404, detail="community not found")
-    return CommunityOut(
-        id=community.id,
-        name=community.name,
-        description=community.description,
-        type=community.type,
-        owner_user_id=community.owner_user_id,
-        is_personal=community.is_personal,
-        personal_user_id=community.personal_user_id,
-        created_at=community.created_at,
-    )
+    return community
 
 
 # ---- Posts ----
