@@ -188,6 +188,25 @@ def get_user_out_pub(
         status=user.status
     )
 
+def get_user_out_priv(
+    userstr: str,
+    session: Session = Depends(get_session),
+    ) -> Optional[User]:
+    user = get_user_base(userstr, session=session)
+    
+    if not user:
+        return None
+    
+    return UserPrivateOut(
+        id=user.id,
+        username=user.username,
+        email=user.email,
+        created_at=user.created_at,
+        status=user.status,
+        status_changed_at=user.status_changed_at,
+        banned_reason=user.banned_reason,
+    )
+
 def get_community_base(
     communitystr: str,
     session: Session = Depends(get_session),
@@ -295,6 +314,36 @@ def login(payload: LoginPayload, session: Session = Depends(get_session)):
             status_changed_at=user.status_changed_at,
             banned_reason=user.banned_reason,
         ),
+    )
+
+# ---- Users ----
+
+@v1.get("/users/{user_id}", response_model=UserPrivateOut | UserBaseOut)
+def get_user(
+    user_id: int,
+    session: Session = Depends(get_session),
+    me: Optional[User] = Depends(get_optional_current_user),
+):
+    if me and me.id == user_id:
+        user = get_user_out_priv(user_id, session=session)
+    else:
+        user = get_user_out_pub(user_id, session=session)
+    if not user:
+        raise HTTPException(status_code=404, detail="user not found")
+    return user
+
+@v1.get("/users/me", response_model=UserPrivateOut)
+def get_user(
+    me: User = Depends(get_current_user),
+):
+    return UserPrivateOut(
+        id=me.id,
+        username=me.username,
+        email=me.email,
+        created_at=me.created_at,
+        status=me.status,
+        status_changed_at=me.status_changed_at,
+        banned_reason=me.banned_reason,
     )
 
 # ---- Communities ----

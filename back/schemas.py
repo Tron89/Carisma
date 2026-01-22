@@ -1,6 +1,6 @@
 # schemas.py
 
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field, EmailStr, field_validator
 from typing import Optional
 from datetime import datetime
 
@@ -26,6 +26,14 @@ class UserCreatePayload(BaseModel):
     username: str = Field(min_length=1, pattern=r"^[^@]+$")
     email: EmailStr = Field(max_length=254)
     password: str = Field(min_length=1)
+    
+    @field_validator("username")
+    @classmethod
+    def must_contain_non_digit(cls, v: str):
+        if v.isdigit():
+            raise ValueError("username must contain at least one non-digit character")
+        return v
+    
 
 class LoginPayload(BaseModel):
     user: str = Field(min_length=1, pattern=r".*\D.*")
