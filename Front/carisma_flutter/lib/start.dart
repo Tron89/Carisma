@@ -12,14 +12,22 @@ class Main extends StatefulWidget {
 class _MainState extends State<Main> {
   bool isLoggedIn = false;
 
-  void logginSuccess(){
+  late String token;
+  late Map<String, dynamic> user;
+
+  void logginSuccess({
+    required String token,
+    required Map<String, dynamic> user,
+  }){
     setState(() {
+      this.token = token;
+      this.user = user;
       isLoggedIn = true;
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    return isLoggedIn ? const HomeView() : LogginView(onLogginSuccess: logginSuccess);
+    return isLoggedIn ? HomeView(token: token, user: user) : LogginView(onLogginSuccess: logginSuccess);
   }
 }
