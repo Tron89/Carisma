@@ -14,6 +14,7 @@ import hashlib
 from fastapi import FastAPI, HTTPException, Depends, Header, status, APIRouter
 from sqlmodel import SQLModel, Session, create_engine, select
 from sqlalchemy import func
+from sqlalchemy.orm import selectinload
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 import os
@@ -240,36 +241,67 @@ def get_community_out(
         created_at=community.created_at,
     )
 
-def get_post_base(
+def get_post_out(
     postid: int,
     session: Session = Depends(get_session),
     ) -> Optional[Post]:
     post: Optional[Post] = None
     if isinstance(postid, int):
-        post = session.get(Post, int(postid))
-    # TODO: Optimizable
-    likes = session.exec(
-        select(func.count())
-        .select_from(PostVote)
-        .where(PostVote.post_id == post.id, PostVote.value == 1)
-    ).one()
-    dislikes = session.exec(
-        select(func.count())
-        .select_from(PostVote)
-        .where(PostVote.post_id == post.id, PostVote.value == -1)
-    ).one()
-    comments = session.exec(
-        select(func.count())
-        .select_from(Comment)
-        .where(Comment.post_id == post.id, Comment.deleted_at.is_(None))
-    ).one()
+        likes_sq = (
+            select(func.count(PostVote.post_id))
+            .where(PostVote.post_id == Post.id, PostVote.value == 1)
+            .correlate(Post)
+            .scalar_subquery()
+        )
+
+        dislikes_sq = (
+            select(func.count(PostVote.post_id))
+            .where(PostVote.post_id == Post.id, PostVote.value == -1)
+            .correlate(Post)
+            .scalar_subquery()
+        )
+
+        comments_sq = (
+            select(func.count(Comment.post_id))
+            .where(Comment.post_id == Post.id, Comment.deleted_at.is_(None))
+            .correlate(Post)
+            .scalar_subquery()
+        )
+
+        stmt = (
+            select(Post, likes_sq, dislikes_sq, comments_sq)
+            .where(Post.id == postid)
+            .options(
+                selectinload(Post.author),
+                selectinload(Post.community),
+            )
+        )
+
+    row = session.exec(stmt).first()
     
-    author = get_user_out_pub(post.author_user_id, session=session)
-        
-    return PostOut(
+    if not row:
+        return None
+
+    post, likes, dislikes, comments = row
+
+    return PostOut( # TODO: to change to a more simplificated way
         id=post.id,
-        community_id=post.community_id,
-        author=author,
+        community_id=CommunityOut(
+            id=post.community.id,
+            name=post.community.name,
+            description=post.community.description,
+            type=post.community.type,
+            owner_user_id=post.community.owner_user_id,
+            is_personal=post.community.is_personal,
+            personal_user_id=post.community.personal_user_id,
+            created_at=post.community.created_at
+        ),
+        author=UserBaseOut(
+            id=post.author.id,
+            username=post.author.username,
+            created_at=post.author.created_at,
+            status=post.author.status
+        ),
         title=post.title,
         body=post.body,
         image_url=post.image_url,
@@ -431,7 +463,7 @@ def get_5_random_posts(
 
     # super simple response
     return [
-        get_post_base(id, session=session)
+        get_post_out(id, session=session)
         for id in ids
     ]
 
@@ -442,7 +474,7 @@ def get_post(
     me: Optional[User] = Depends(get_optional_current_user),
 ):
     _ = me
-    post = get_post_base(post_id, session=session)
+    post = get_post_out(post_id, session=session)
     if not post or post.deleted_at is not None:
         raise HTTPException(status_code=404, detail="post not found")
 

@@ -37,6 +37,7 @@ class User(SQLModel, table=True):
     username: str = Field(index=True, nullable=False) # unique and can't be only a number (userstr.isdigit())
     email: str = Field(index=True, nullable=False)
     password_hash: str = Field(nullable=False)
+    image_url: Optional[str] = Field(default=None)
 
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), nullable=False)
 
@@ -81,6 +82,7 @@ class Community(SQLModel, table=True):
     name: str = Field(index=True, nullable=False)
     description: Optional[str] = Field(default=None)
     type: CommunityType = Field(default=CommunityType.PUBLIC, nullable=False)
+    image_url: Optional[str] = Field(default=None)
 
     owner_user_id: int = Field(foreign_key="users.id", nullable=False, index=True)
 
