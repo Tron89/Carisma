@@ -10,7 +10,9 @@ import 'package:carisma_flutter/widgets/top_nav_bar.dart';
 import 'package:flutter/material.dart';
 
 class HomeView extends StatefulWidget {
-  const HomeView({super.key});
+  final String token;
+  final Map<String, dynamic> user;
+  const HomeView({super.key, required this.token, required this.user});
 
   @override
   State<HomeView> createState() => _HomeViewState();
@@ -56,9 +58,9 @@ class _HomeViewState extends State<HomeView> {
         return PostInfo(
           (imgUrl == null || imgUrl.isEmpty) ? null : imgUrl,
           post['title'] ?? 'No Title',
-          rng.nextInt(1000), // Likes aleatorios
-          rng.nextInt(1000), // Dislikes aleatorios
-          rng.nextInt(500),  // Comments aleatorios
+          post['likes'] ?? 0, // Likes aleatorios
+          post['dislikes'] ?? 0, // Dislikes aleatorios
+          post['comments'] ?? 0,  // Comments aleatorios
         );
       }).toList();
 
