@@ -23,12 +23,12 @@ class CommunityCreatePayload(BaseModel):
     type: CommunityType = CommunityType.PUBLIC
 
 class UserCreatePayload(BaseModel):
-    username: str = Field(min_length=1, pattern=r".*\D.*")
+    username: str = Field(min_length=1, pattern=r"^[^@]+$")
     email: EmailStr = Field(max_length=254)
     password: str = Field(min_length=1)
 
 class LoginPayload(BaseModel):
-    username: str = Field(min_length=1, pattern=r".*\D.*")
+    user: str = Field(min_length=1, pattern=r".*\D.*")
     password: str = Field(min_length=1)
 
 # ---- Object Schemas ----

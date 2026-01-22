@@ -246,8 +246,6 @@ def get_post_base(
 
 @v1.post("/register", response_model=UserPrivateOut, status_code=status.HTTP_201_CREATED)
 def register(payload: UserCreatePayload, session: Session = Depends(get_session)):
-    if payload.username.isdigit():
-        raise HTTPException(status_code=400, detail="username must include at least one letter")
 
     existing_user = session.exec(select(User).where(User.username == payload.username)).first()
     if existing_user:
@@ -277,7 +275,7 @@ def register(payload: UserCreatePayload, session: Session = Depends(get_session)
 
 @v1.post("/login", response_model=LoginResponse)
 def login(payload: LoginPayload, session: Session = Depends(get_session)):
-    user = session.exec(select(User).where(User.username == payload.username)).first()
+    user = session.exec(select(User).where((User.email if "@" in payload.user else User.username) == payload.user)).first()
     if not user or not verify_password(payload.password, user.password_hash):
         _unauthorized("Bad credentials")
 
