@@ -370,20 +370,6 @@ def login(payload: LoginPayload, session: Session = Depends(get_session)):
 
 # ---- Users ----
 
-@v1.get("/users/{user_id}", response_model=UserPrivateOut | UserBaseOut)
-def get_user(
-    user_id: int,
-    session: Session = Depends(get_session),
-    me: Optional[User] = Depends(get_optional_current_user),
-):
-    if me and me.id == user_id:
-        user = get_user_out_priv(user_id, session=session)
-    else:
-        user = get_user_out_pub(user_id, session=session)
-    if not user:
-        raise HTTPException(status_code=404, detail="user not found")
-    return user
-
 @v1.get("/users/me", response_model=UserPrivateOut)
 def get_user(
     me: User = Depends(get_current_user),
@@ -397,6 +383,20 @@ def get_user(
         status_changed_at=me.status_changed_at,
         banned_reason=me.banned_reason,
     )
+
+@v1.get("/users/{user_id}", response_model=UserPrivateOut | UserBaseOut)
+def get_user(
+    user_id: int,
+    session: Session = Depends(get_session),
+    me: Optional[User] = Depends(get_optional_current_user),
+):
+    if me and me.id == user_id:
+        user = get_user_out_priv(user_id, session=session)
+    else:
+        user = get_user_out_pub(user_id, session=session)
+    if not user:
+        raise HTTPException(status_code=404, detail="user not found")
+    return user
 
 # ---- Communities ----
 
@@ -466,31 +466,7 @@ def get_5_random_posts(
         get_post_out(id, session=session)
         for id in ids
     ]
-
-@v1.get("/posts/{post_id}", response_model=PostOut)
-def get_post(
-    post_id: int,
-    session: Session = Depends(get_session),
-    me: Optional[User] = Depends(get_optional_current_user),
-):
-    _ = me
-    post = get_post_out(post_id, session=session)
-    if not post or post.deleted_at is not None:
-        raise HTTPException(status_code=404, detail="post not found")
-
-    return PostOut(
-        id=post.id,
-        community_id=post.community_id,
-        author_user_id=post.author_user_id,
-        title=post.title,
-        body=post.body,
-        image_url=post.image_url,
-        created_at=post.created_at,
-        likes=post.likes,
-        dislikes=post.dislikes,
-        comments=post.comments,
-    )
-
+    
 @v1.post("/posts", response_model=PostOut, status_code=status.HTTP_201_CREATED)
 def new_post(
     payload: PostCreatePayload,
@@ -520,6 +496,31 @@ def new_post(
         image_url=post.image_url,
         created_at=post.created_at,
     )
+
+@v1.get("/posts/{post_id}", response_model=PostOut)
+def get_post(
+    post_id: int,
+    session: Session = Depends(get_session),
+    me: Optional[User] = Depends(get_optional_current_user),
+):
+    _ = me
+    post = get_post_out(post_id, session=session)
+    if not post or post.deleted_at is not None:
+        raise HTTPException(status_code=404, detail="post not found")
+
+    return PostOut(
+        id=post.id,
+        community_id=post.community_id,
+        author_user_id=post.author_user_id,
+        title=post.title,
+        body=post.body,
+        image_url=post.image_url,
+        created_at=post.created_at,
+        likes=post.likes,
+        dislikes=post.dislikes,
+        comments=post.comments,
+    )
+
 
 
 app.include_router(v1)

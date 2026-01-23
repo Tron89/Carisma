@@ -1,5 +1,6 @@
 # models.py
 
+from uuid import UUID, uuid4
 from datetime import datetime, timezone
 from enum import Enum
 from typing import List, Optional
