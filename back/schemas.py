@@ -43,17 +43,23 @@ class LoginPayload(BaseModel):
 class UserBaseOut(BaseModel):
     id: int
     username: str
+    image_url: Optional[str] = None
+
+class UserPublicOut(UserBaseOut):
     created_at: datetime
     status: UserStatus
 
-class UserPrivateOut(UserBaseOut):
+class UserPrivateOut(UserPublicOut):
     email: str
     status_changed_at: datetime
     banned_reason: str | None = None
 
-class CommunityOut(BaseModel):
+class CommunityBaseOut(BaseModel):
     id: int
     name: str
+    image_url: Optional[str] = None
+
+class CommunityPublicOut(CommunityBaseOut):
     description: str | None = None
     type: CommunityType
     owner_user_id: int
@@ -63,7 +69,7 @@ class CommunityOut(BaseModel):
     
 class PostOut(BaseModel):
     id: int
-    community_id: int
+    community: CommunityBaseOut
     author: UserBaseOut
     title: str
     body: Optional[str] = None

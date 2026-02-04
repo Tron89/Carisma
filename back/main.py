@@ -176,15 +176,16 @@ def get_user_base(
 def get_user_out_pub(
     userstr: str,
     session: Session = Depends(get_session),
-    ) -> Optional[User]:
+    ) -> Optional[UserPublicOut]:
     user = get_user_base(userstr, session=session)
     
     if not user:
         return None
     
-    return UserBaseOut(
+    return UserPublicOut(
         id=user.id,
         username=user.username,
+        image_url=user.image_url,
         created_at=user.created_at,
         status=user.status
     )
@@ -201,6 +202,7 @@ def get_user_out_priv(
     return UserPrivateOut(
         id=user.id,
         username=user.username,
+        image_url=user.image_url,
         email=user.email,
         created_at=user.created_at,
         status=user.status,
@@ -221,18 +223,34 @@ def get_community_base(
 
     return community
 
-def get_community_out(
+def get_community_out_base(
     communitystr: str,
     session: Session = Depends(get_session),
-    ) -> Optional[CommunityOut]:
+    ) -> Optional[CommunityBaseOut]:
     community = get_community_base(communitystr, session=session)
     
     if not community:
         return None
     
-    return CommunityOut(
+    return CommunityBaseOut(
         id=community.id,
         name=community.name,
+        image_url=community.image_url,
+        )
+    
+def get_community_out_public(
+    communitystr: str,
+    session: Session = Depends(get_session),
+    ) -> Optional[CommunityPublicOut]:
+    community = get_community_base(communitystr, session=session)
+    
+    if not community:
+        return None
+    
+    return CommunityPublicOut(
+        id=community.id,
+        name=community.name,
+        image_url=community.image_url,
         description=community.description,
         type=community.type,
         owner_user_id=community.owner_user_id,
@@ -286,21 +304,15 @@ def get_post_out(
 
     return PostOut( # TODO: to change to a more simplificated way
         id=post.id,
-        community_id=CommunityOut(
+        community_id=CommunityBaseOut(
             id=post.community.id,
             name=post.community.name,
-            description=post.community.description,
-            type=post.community.type,
-            owner_user_id=post.community.owner_user_id,
-            is_personal=post.community.is_personal,
-            personal_user_id=post.community.personal_user_id,
-            created_at=post.community.created_at
+            image_url=post.community.image_url,
         ),
         author=UserBaseOut(
             id=post.author.id,
             username=post.author.username,
-            created_at=post.author.created_at,
-            status=post.author.status
+            image_url=post.author.image_url,
         ),
         title=post.title,
         body=post.body,
@@ -384,7 +396,7 @@ def get_user(
         banned_reason=me.banned_reason,
     )
 
-@v1.get("/users/{user_id}", response_model=UserPrivateOut | UserBaseOut)
+@v1.get("/users/{user_id}", response_model=UserPrivateOut | UserPublicOut)
 def get_user(
     user_id: int,
     session: Session = Depends(get_session),
@@ -400,7 +412,7 @@ def get_user(
 
 # ---- Communities ----
 
-@v1.post("/communities", response_model=CommunityOut, status_code=status.HTTP_201_CREATED)
+@v1.post("/communities", response_model=CommunityPublicOut, status_code=status.HTTP_201_CREATED)
 def new_community(
     payload: CommunityCreatePayload,
     session: Session = Depends(get_session),
@@ -419,9 +431,10 @@ def new_community(
     session.add(community)
     session.commit()
     session.refresh(community)
-    return CommunityOut(
+    return CommunityPublicOut(
         id=community.id,
         name=community.name,
+        image_url=community.image_url,
         description=community.description,
         type=community.type,
         owner_user_id=community.owner_user_id,
@@ -430,13 +443,13 @@ def new_community(
         created_at=community.created_at,
     )
 
-@v1.get("/communities/{community_str}", response_model=CommunityOut)
+@v1.get("/communities/{community_str}", response_model=CommunityPublicOut)
 def get_community(
     community_str: str,
     session: Session = Depends(get_session),
     me: User = Depends(get_current_user),
 ):
-    community = get_community_out(community_str, session=session)
+    community = get_community_out_public(community_str, session=session)
     if not community or community.deleted_at is not None:
         raise HTTPException(status_code=404, detail="community not found")
     return community
