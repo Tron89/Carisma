@@ -6,9 +6,12 @@ class HttpConnection {
 
   HttpConnection(this.baseUrl);
 
-  Future<http.Response> get(String endpoint) async {
+  Future<http.Response> get(
+    String endpoint,
+    {Map<String, String> headers = const {}}) async {
+    
     final url = Uri.parse('$baseUrl$endpoint');
-    return await http.get(url);
+    return await http.get(url, headers: headers);
   }
 
   Future<http.Response> post(String endpoint, Map<String, dynamic> body) async {

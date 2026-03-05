@@ -1,18 +1,33 @@
 import 'dart:math';
 import 'dart:convert';
 
+import 'package:carisma_flutter/main.dart';
 import 'package:carisma_flutter/models/post_info.dart';
+import 'package:carisma_flutter/util/app_data.dart';
 // import 'package:carisma_flutter/util/app_data.dart';
 import 'package:carisma_flutter/util/http_connection.dart';
 import 'package:carisma_flutter/widgets/bottom_nav_bar.dart';
 import 'package:carisma_flutter/widgets/post.dart';
 import 'package:carisma_flutter/widgets/top_nav_bar.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:logging/logging.dart';
+
+final Logger logger = Logger('HomeLogger');
 
 class HomeView extends StatefulWidget {
   final String token;
   final Map<String, dynamic> user;
-  const HomeView({super.key, required this.token, required this.user});
+  final void Function() onLogout;
+  const HomeView({super.key, required this.token, required this.user, required this.onLogout});
+
+  void startLogger(){
+    Logger.root.level = Level.ALL; // Set the logging level
+    Logger.root.onRecord.listen((record) {
+      // Customize the log output format
+      print('${record.level.name}: ${record.time}: ${record.loggerName}: ${record.message}');
+    });
+  }
 
   @override
   State<HomeView> createState() => _HomeViewState();
@@ -21,8 +36,12 @@ class HomeView extends StatefulWidget {
 class _HomeViewState extends State<HomeView> {
   final Random rng = Random();
   final ScrollController scrollController = ScrollController();
-  final api = HttpConnection('http://10.0.2.2:8000/v1/');
-
+  final api = HttpConnection(AppData.SERVER_URL);
+  late SharedPreferences prefs;
+  
+  Future<void> initPrefs() async {
+    prefs = await SharedPreferences.getInstance();
+  }
   int currentIndex = 0;
   bool isLoading = false;
 
@@ -37,6 +56,7 @@ class _HomeViewState extends State<HomeView> {
   @override
   void initState() {
     super.initState();
+    initPrefs();
 
     getPosts(); // carga inicial
 
@@ -51,7 +71,7 @@ class _HomeViewState extends State<HomeView> {
   Future<void> getPosts() async {
     final response = await api.get('posts');
 
-    if (response.statusCode == 200) {
+    if (response.statusCode == AppData.OK_CODE) {
       final List<dynamic> data = jsonDecode(response.body);
       List<PostInfo> fetchedPosts = data.map((post) {
         String? imgUrl = post['image_url']?.toString();
@@ -95,7 +115,7 @@ class _HomeViewState extends State<HomeView> {
       body: SafeArea(
         child: Column(
           children: [
-            TopNavBar(),
+            TopNavBar(onLogout: widget.onLogout),
             Expanded(
               child: Container(
                 color: Colors.white,

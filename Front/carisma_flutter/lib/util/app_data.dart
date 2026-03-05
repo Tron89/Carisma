@@ -83,4 +83,15 @@ class AppData {
     'Reflexiones que llegan sin avisar',
     'Nada épico, pero auténtico',
   ];
+
+  static const OK_CODE = 200;
+  static const CREATED_CODE = 201;
+  static const BAD_REQUEST_CODE = 400;
+  static const UNAUTHORIZED_CODE = 401;
+  static const NOT_FOUND_CODE = 404;
+  static const CONFLICT_CODE = 409;
+  static const VALIDATION_ERROR_CODE = 422;
+  static const INTERNAL_SERVER_ERROR_CODE = 500;
+
+  static const SERVER_URL = 'http://10.0.2.2:8000/v1/';
 }

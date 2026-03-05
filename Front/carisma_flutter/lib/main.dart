@@ -2,22 +2,22 @@ import 'package:carisma_flutter/start.dart';
 import 'package:flutter/material.dart';
 
 void main() {
-  runApp(const Carisma());
+  runApp(const App());
 }
 
-class Carisma extends StatefulWidget {
-  const Carisma({super.key});
+class App extends StatefulWidget {
+  const App({super.key});
 
   @override
-  State<Carisma> createState() => _CarismaState();
+  State<App> createState() => _AppState();
 }
 
-class _CarismaState extends State<Carisma> {
+class _AppState extends State<App> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       color: Colors.red,
-      home: Main(),
+      home: Start(),
     );
   }
 }

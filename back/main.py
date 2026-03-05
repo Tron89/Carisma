@@ -317,6 +317,19 @@ def login(payload: LoginPayload, session: Session = Depends(get_session)):
     )
 
 # ---- Users ----
+@v1.get("/users/me", response_model=UserPrivateOut)
+def get_user(
+    me: User = Depends(get_current_user),
+):
+    return UserPrivateOut(
+        id=me.id,
+        username=me.username,
+        email=me.email,
+        created_at=me.created_at,
+        status=me.status,
+        status_changed_at=me.status_changed_at,
+        banned_reason=me.banned_reason,
+    )
 
 @v1.get("/users/{user_id}", response_model=UserPrivateOut | UserBaseOut)
 def get_user(
@@ -332,19 +345,6 @@ def get_user(
         raise HTTPException(status_code=404, detail="user not found")
     return user
 
-@v1.get("/users/me", response_model=UserPrivateOut)
-def get_user(
-    me: User = Depends(get_current_user),
-):
-    return UserPrivateOut(
-        id=me.id,
-        username=me.username,
-        email=me.email,
-        created_at=me.created_at,
-        status=me.status,
-        status_changed_at=me.status_changed_at,
-        banned_reason=me.banned_reason,
-    )
 
 # ---- Communities ----
 
