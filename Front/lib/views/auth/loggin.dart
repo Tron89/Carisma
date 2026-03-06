@@ -1,14 +1,15 @@
 import 'dart:convert';
 
 import 'package:carisma_flutter/util/Errors.dart';
-import 'package:carisma_flutter/util/commons.dart';
 import 'package:carisma_flutter/views/auth/AuthService.dart';
-import 'package:carisma_flutter/views/auth/loggin.dart';
+import 'package:carisma_flutter/views/auth/recoverPassword.dart';
+import 'package:carisma_flutter/views/auth/signup.dart';
 import 'package:flutter/material.dart';
 import 'package:carisma_flutter/util/http_connection.dart';
 import 'package:carisma_flutter/util/functions.dart';
+import 'package:carisma_flutter/util/commons.dart';
 
-class SignUpView extends StatefulWidget {
+class LogginView extends StatefulWidget {
   final void Function({
     required String token,
     required Map<String, dynamic> user,
@@ -18,43 +19,39 @@ class SignUpView extends StatefulWidget {
     required Widget w
   }) changeView;
 
-  const SignUpView({super.key, required this.onLogginSuccess, required this.changeView});
+  const LogginView({super.key, required this.onLogginSuccess, required this.changeView});
 
   @override
-  State<SignUpView> createState() => _SignUpViewState();
+  State<LogginView> createState() => _LogginViewState();
 }
 
-class _SignUpViewState extends State<SignUpView> {
+class _LogginViewState extends State<LogginView> {
   final authService = Authservice(HttpConnection(urlString));
 
-  final userController = TextEditingController();
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
 
   @override
   void dispose() {
     super.dispose();
-    userController.dispose();
     emailController.dispose();
     passwordController.dispose();
   }
 
-  Future<void> onSignUpPressed() async {
-    if (userController.text.trim().isEmpty ||
-        emailController.text.trim().isEmpty ||
+  Future<void> onLoginPressed() async {
+    if (emailController.text.trim().isEmpty ||
         passwordController.text.trim().isEmpty) {
-      Functions.showError(context, "Error", 'Inserte usuario, correo y contraseña.');
+      Functions.showError(context, "Error", 'Inserte usuario y contraseña.');
       return;
     }
 
-    final response = await authService.registerAndLogin(
-        userController.text.trim(),
-        emailController.text,
+    final response = await authService.login(
+        emailController.text.trim(),
         passwordController.text.trim()
     );
     if (!mounted) return;
 
-    if (response.statusCode != 201) {
+    if (response.statusCode != 200) {
       Functions.showError(context, "Error", Functions.getError(response), error: response.body);
       return;
     }
@@ -67,8 +64,12 @@ class _SignUpViewState extends State<SignUpView> {
     );
   }
 
-  void onLoginPressed(){
-    widget.changeView(w: LogginView(onLogginSuccess: widget.onLogginSuccess, changeView: widget.changeView));
+  void onRecoveryPressed(){
+    widget.changeView(w: RecoverPasswordView(onLogginSuccess: widget.onLogginSuccess, changeView: widget.changeView));
+  }
+
+  void onSignUpPressed(){
+    widget.changeView(w: SignUpView(onLogginSuccess: widget.onLogginSuccess, changeView: widget.changeView));
   }
 
   @override
@@ -92,19 +93,15 @@ class _SignUpViewState extends State<SignUpView> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  "Crear cuenta",
+                  "Iniciar sesion",
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold
                   ),
                 ),
                 TextField(
-                  controller: userController,
-                  decoration: InputDecoration(labelText: 'Usuario'),
-                ),
-                TextField(
                   controller: emailController,
-                  decoration: InputDecoration(labelText: 'Email'),
+                  decoration: InputDecoration(labelText: 'Usuario o Email'),
                 ),
                 TextField(
                   controller: passwordController,
@@ -114,7 +111,7 @@ class _SignUpViewState extends State<SignUpView> {
                 Padding(
                   padding: const EdgeInsets.only(top: 20.0),
                   child: ElevatedButton(
-                    onPressed: onSignUpPressed,
+                    onPressed: onLoginPressed,
                     autofocus: true,
                     style: ElevatedButton.styleFrom(
                       elevation: 0,
@@ -124,11 +121,11 @@ class _SignUpViewState extends State<SignUpView> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text('Crear cuenta'),
+                    child: const Text('Iniciar sesion'),
                   ),
                 ),
                 ElevatedButton(
-                  onPressed: onLoginPressed,
+                  onPressed: onSignUpPressed,
                   style: ElevatedButton.styleFrom(
                     elevation: 0,
                     backgroundColor: Colors.transparent,
@@ -138,7 +135,16 @@ class _SignUpViewState extends State<SignUpView> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text("Iniciar sesion"),
+                  child: const Text("Crear cuenta"),
+                ),
+                ElevatedButton(
+                  onPressed: onRecoveryPressed,
+                  style: ElevatedButton.styleFrom(
+                    elevation: 0,
+                    backgroundColor: Colors.transparent,
+                    foregroundColor: Colors.black,
+                  ),
+                  child: const Text("Olvide la contraseña")
                 ),
               ],
             ),

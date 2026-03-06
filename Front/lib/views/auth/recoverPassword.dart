@@ -1,11 +1,11 @@
 import 'dart:convert';
 
-import 'package:carisma_flutter/views/auth/signup.dart';
+import 'package:carisma_flutter/views/auth/loggin.dart';
 import 'package:flutter/material.dart';
 import 'package:carisma_flutter/util/http_connection.dart';
 import 'package:carisma_flutter/util/functions.dart';
 
-class LogginView extends StatefulWidget {
+class RecoverPasswordView extends StatefulWidget {
   final void Function({
     required String token,
     required Map<String, dynamic> user,
@@ -15,54 +15,25 @@ class LogginView extends StatefulWidget {
     required Widget w
   }) changeView;
 
-  const LogginView({super.key, required this.onLogginSuccess, required this.changeView});
+  const RecoverPasswordView({super.key, required this.onLogginSuccess, required this.changeView});
 
   @override
-  State<LogginView> createState() => _LogginViewState();
+  State<RecoverPasswordView> createState() => _RecoverPasswordViewState();
 }
 
-class _LogginViewState extends State<LogginView> {
+class _RecoverPasswordViewState extends State<RecoverPasswordView> {
   final api = HttpConnection('http://10.0.2.2:8000/v1/');
 
   final emailController = TextEditingController();
-  final passwordController = TextEditingController();
 
   @override
   void dispose() {
-    emailController.dispose();
-    passwordController.dispose();
     super.dispose();
+    emailController.dispose();
   }
 
-  Future<void> onLoginPressed() async {
-    if (emailController.text.trim().isEmpty ||
-        passwordController.text.trim().isEmpty) {
-      showError(context, "Error", 'Inserte usuario y contraseña.');
-      return;
-    }
-
-    final response = await api.post('login', {
-      'username': emailController.text.trim(),
-      'password': passwordController.text.trim(),
-    });
-
-    if (!mounted) return;
-
-    if (response.statusCode != 200) {
-      showError(context, "Error", 'Usuario o contraseña incorrectos.');
-      return;
-    }
-
-    final data = jsonDecode(response.body);
-
-    widget.onLogginSuccess(
-      token: data["access_token"],
-      user: data['user'] as Map<String, dynamic>,
-    );
-  }
-
-  onSignUpPressed(){
-    widget.changeView(w: SignUpView(onLogginSuccess: widget.onLogginSuccess, changeView: widget.changeView));
+  void onLoginPressed(){
+    widget.changeView(w: LogginView(onLogginSuccess: widget.onLogginSuccess, changeView: widget.changeView));
   }
 
   @override
@@ -85,19 +56,21 @@ class _LogginViewState extends State<LogginView> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                Text(
+                  "Recuperar contraseña",
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold
+                  ),
+                ),
                 TextField(
                   controller: emailController,
                   decoration: InputDecoration(labelText: 'Usuario o Email'),
                 ),
-                TextField(
-                  controller: passwordController,
-                  decoration: InputDecoration(labelText: 'Contraseña'),
-                  obscureText: true,
-                ),
                 Padding(
                   padding: const EdgeInsets.only(top: 20.0),
                   child: ElevatedButton(
-                    onPressed: onLoginPressed,
+                    onPressed: null,
                     autofocus: true,
                     style: ElevatedButton.styleFrom(
                       elevation: 0,
@@ -107,11 +80,11 @@ class _LogginViewState extends State<LogginView> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text('Iniciar sesion'),
+                    child: const Text('Enviar'),
                   ),
                 ),
                 ElevatedButton(
-                  onPressed: onSignUpPressed,
+                  onPressed: onLoginPressed,
                   style: ElevatedButton.styleFrom(
                     elevation: 0,
                     backgroundColor: Colors.transparent,
@@ -121,16 +94,7 @@ class _LogginViewState extends State<LogginView> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text("Crear cuenta"),
-                ),
-                ElevatedButton(
-                  onPressed: null,
-                  style: ElevatedButton.styleFrom(
-                    elevation: 0,
-                    backgroundColor: Colors.transparent,
-                    foregroundColor: Colors.black,
-                  ),
-                  child: const Text("Olvide la contraseña")
+                  child: const Text("Iniciar sesion"),
                 ),
               ],
             ),
