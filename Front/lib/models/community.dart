@@ -1,10 +1,12 @@
-class PostInfo{
-  final String? img;
-  final String title;
-  final int likes;
-  final int dislikes;
-  final int comments;
-  final String user;
+class CommunityInfo {
+  final int id;
+  final String name;
+  final String description;
+  final String type;
+  final int owner;
+  final int isPersonal;
+  final int personalUID;
+  final String createdAt;
 
-  PostInfo(this.img, this.title, this.likes, this.dislikes, this.comments, this.user);
+  CommunityInfo(this.id, this.name, this.description, this.type, this.owner, this.isPersonal, this.personalUID, this.createdAt);
 }

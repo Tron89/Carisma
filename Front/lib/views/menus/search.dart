@@ -1,7 +1,7 @@
 import 'dart:math';
 import 'dart:convert';
 
-import 'package:carisma_flutter/models/post_info.dart';
+import 'package:carisma_flutter/models/post.dart';
 import 'package:carisma_flutter/util/commons.dart';
 import 'package:carisma_flutter/util/functions.dart';
 // import 'package:carisma_flutter/util/app_data.dart';
@@ -22,9 +22,9 @@ class _SearchViewState extends State<SearchView> {
   @override
   Widget build(BuildContext context) {
     return Expanded(
-        child: Container(
+      child: Container(
 
-        )
+      )
     );
   }
 }

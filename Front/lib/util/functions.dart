@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:carisma_flutter/util/Errors.dart';
+import 'package:carisma_flutter/util/errors.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart';
 
@@ -38,5 +38,9 @@ class Functions {
       500 => ErrorType.E500.message,
       _ => 'Error inesperado [${response.statusCode}](${response.body})'
     };
+  }
+
+  static void showDebug(String message, {String tag = 'debug'}){
+    debugPrint("[${tag.toUpperCase}]: $message");
   }
 }

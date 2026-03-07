@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
 
-class Post extends StatelessWidget {
+class PostView extends StatelessWidget {
   final String? img;
   final String title;
+  final String user;
 
   final int likes;
   final int dislikes;
   final int comments;
 
-  const Post({
+  const PostView({
     super.key,
     this.img,
     required this.title,
+    required this.user,
     required this.likes,
     required this.dislikes,
     required this.comments,
@@ -41,10 +43,19 @@ class Post extends StatelessWidget {
             ),
             Padding(
               padding: const EdgeInsets.only(left: 10),
-              child: Text("u/UsuarioGenerico"),
+              child: Text(user),
             ),
             Spacer(),
-            TextButton(child: const Text("Join"), onPressed: () => {}),
+            TextButton(
+              style: TextButton.styleFrom(
+                foregroundColor: Color.fromARGB(255, 17, 70, 90),
+                backgroundColor: Color.fromARGB(255, 126, 201, 230),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadiusGeometry.circular(50)),
+                padding: EdgeInsets.all(0),
+              ),
+              child: const Text("Join"),
+              onPressed: () => {},
+            ),
           ],
         ),
         Text(title, style: titleStyle),
@@ -53,44 +64,56 @@ class Post extends StatelessWidget {
           padding: const EdgeInsets.only(top: 10),
           child: Row(
             children: [
-              IconButton(
-                onPressed: () => {},
-                icon: Icon(Icons.check_rounded),
-                style: IconButton.styleFrom(
-                  padding: EdgeInsets.only(right: 5),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap
+              Container(
+                margin: EdgeInsets.only(right: 5),
+                child: IconButton(
+                  onPressed: () => {},
+                  icon: Icon(Icons.check_rounded),
+                  style: IconButton.styleFrom(
+                    padding: EdgeInsets.all(0),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap
+                  ),
                 ),
               ),
               Text(likes.toString(), style: textStyle),
-              IconButton(
-                onPressed: () => {},
-                icon: Icon(Icons.close_rounded),
-                style: IconButton.styleFrom(
-                    padding: EdgeInsets.only(left: 10, right: 5),
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap
+              Container(
+                margin: EdgeInsets.only(left: 10, right: 5),
+                child: IconButton(
+                  onPressed: () => {},
+                  icon: Icon(Icons.close_rounded),
+                  style: IconButton.styleFrom(
+                      padding: EdgeInsets.all(0),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap
+                  ),
                 ),
               ),
               Text(dislikes.toString(), style: textStyle),
               Spacer(),
-              IconButton(
-                onPressed: () => {},
-                icon: Icon(Icons.messenger_outline_rounded),
-                style: IconButton.styleFrom(
-                    padding: EdgeInsets.only(right: 5),
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap
+              Container(
+                margin: EdgeInsets.only(right: 5),
+                child: IconButton(
+                  onPressed: () => {},
+                  icon: Icon(Icons.messenger_outline_rounded),
+                  style: IconButton.styleFrom(
+                      padding: EdgeInsets.all(0),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap
+                  ),
                 ),
               ),
               Text(comments.toString(), style: textStyle),
-              IconButton(
-                onPressed: () => {},
-                icon: Icon(Icons.share_rounded),
-                style: IconButton.styleFrom(
-                    padding: EdgeInsets.only(left: 10),
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap
+              Container(
+                margin: EdgeInsets.only(left: 10),
+                child: IconButton(
+                  onPressed: () => {},
+                  icon: Icon(Icons.share_rounded),
+                  style: IconButton.styleFrom(
+                      padding: EdgeInsets.all(0),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap
+                  ),
                 ),
               ),
             ],

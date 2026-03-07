@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:carisma_flutter/views/auth/loggin.dart';
-import 'package:carisma_flutter/views/home.dart';
 
 class Authview extends StatefulWidget {
   final void Function({
     required String token,
+    required String tokenType,
     required Map<String, dynamic> user,
   }) onLogginSuccess;
 

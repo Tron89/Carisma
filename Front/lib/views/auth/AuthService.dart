@@ -1,8 +1,8 @@
-import 'dart:convert';
-import 'dart:developer' as developer;
 
+
+import 'package:carisma_flutter/util/functions.dart';
 import 'package:carisma_flutter/util/http_connection.dart';
-import 'package:http/src/response.dart';
+import 'package:http/http.dart';
 
 class Authservice {
   final HttpConnection api;
@@ -14,7 +14,7 @@ class Authservice {
       'password': password,
     });
 
-    developer.log(response.body, name: 'login');
+    Functions.showDebug(response.body, tag: 'login');
 
     return response;
   }
@@ -26,7 +26,7 @@ class Authservice {
       'password': password,
     });
 
-    developer.log(response.body, name: 'register');
+    Functions.showDebug(response.body, tag: 'register');
 
     return response;
   }
