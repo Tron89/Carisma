@@ -12,6 +12,7 @@ import base64
 import hashlib
 
 from fastapi import FastAPI, HTTPException, Depends, Header, status, APIRouter
+from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import SQLModel, Session, create_engine, select
 from sqlalchemy import func
 from contextlib import asynccontextmanager
@@ -54,6 +55,13 @@ async def lifespan(app: FastAPI):
     # shutdown
 
 app = FastAPI(lifespan=lifespan)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 v1 = APIRouter(prefix="/v1")
 
 # ---------- FUNCTIONS ----------
